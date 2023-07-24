@@ -121,6 +121,14 @@ RSpec.describe RSpec::Sidekiq::Matchers::BeDelayed do
 
             expect(delay_subject.matches? Object.method :nil?).to be true
           end
+
+          context "when actual incdlues arguments" do
+            it "returns true" do
+              Object.delay.is_a? Object
+
+              expect(delay_subject.matches? Object.method :is_a?).to be true
+            end
+          end
         end
 
         context 'when expected is a delay with arguments' do
@@ -162,7 +170,7 @@ RSpec.describe RSpec::Sidekiq::Matchers::BeDelayed do
             expect(delay_until_with_arguments_subject.matches? Object.method :is_a?).to be true
           end
         end
-        end
+      end
 
       context 'when condition does not match' do
         context 'when expected is a delay' do

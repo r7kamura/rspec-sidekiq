@@ -1,3 +1,6 @@
+require "rspec/mocks/argument_list_matcher"
+require "rspec/mocks/argument_matchers"
+
 module RSpec
   module Sidekiq
     module Matchers
@@ -6,12 +9,19 @@ module RSpec
       end
 
       class BeDelayed
+        include RSpec::Mocks::ArgumentMatchers
+
         def initialize(*expected_arguments)
           raise <<~MSG if RSpec::Sidekiq.configuration.sidekiq_gte_7?
             Use of the be_delayed matcher with Sidekiq 7+ is not possible. Try refactoring to a Sidekiq Job with `perform_at` or `perform_in` and the `have_enqueued_sidekiq_job` matcher
           MSG
 
           @expected_arguments = expected_arguments
+          @expected_arguments_matcher = if @expected_arguments.any?
+            RSpec::Mocks::ArgumentListMatcher.new(*@expected_arguments)
+          else
+            RSpec::Mocks::ArgumentListMatcher.new(any_args)
+          end
         end
 
         def description
@@ -68,7 +78,10 @@ module RSpec
             rescue ArgumentError
               YAML.load(arg) # Pysch < 4 syntax
             end
-            @expected_method_receiver == yaml[0] && @expected_method.name == yaml[1] && (@expected_arguments <=> yaml[2]) == 0
+
+            @expected_method_receiver == yaml[0] &&
+              @expected_method.name == yaml[1] &&
+              @expected_arguments_matcher.args_match?(*yaml[2])
           end
 
           yield job if block && job
